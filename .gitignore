@@ -1,0 +1,9 @@
+// exclude path.
+
+.vs
+.vscode
+node_modules
+core/onebot-client-next/old
+
+*.zip
+*.log

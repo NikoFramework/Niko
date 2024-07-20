@@ -1,0 +1,34 @@
+{
+  "name": "kamenomi_bot",
+  "version": "1.0.0",
+  "description": "A Bot.",
+  "main": "./core/index.ts",
+  "scripts": {
+    "run": "ts-node ./core/index.ts",
+    "run-debug": "ts-node ./core/index.ts",
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
+  },
+  "keywords": [
+    "Bot",
+    "QQ"
+  ],
+  "author": "Kamenomi",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@types/node": "^20.14.11",
+    "@types/ws": "^8.5.11",
+    "eventemitter3": "^5.0.1",
+    "lodash": "^4.17.21",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.6.3",
+    "typescript": "^5.5.3",
+    "typescript-logging": "^2.2.0",
+    "typescript-logging-log4ts-style": "^2.2.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.7",
+    "mocha": "^10.6.0"
+  }
+}
