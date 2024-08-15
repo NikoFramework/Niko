@@ -9,6 +9,8 @@
       {
         "duplicate-id-active": "off"
       }
-    ]
+    ],
+    "typescript-config/strict": "off",
+    "disown-opener": "off"
   }
 }

@@ -1,16 +1,25 @@
-import LoggerProvider from "./logger";
-import { Client } from "./onebot-client-next";
+import { Client } from "onebot-client-next";
 
-const logger = LoggerProvider.getLogger("kamenomi_bot.main");
+import { cliui } from "@poppinss/cliui";
+import InitializeConfig from "./config.ts";
+import InitializeTerminal from "./terminal.ts";
+import InitializePluginManager from "./plugin_manager.ts";
+import InitializePrettyFeedback from "./pretty_feedback.ts";
+
+export const ui = cliui({ mode: "normal" });
+
+InitializeConfig();
+
 const client = new Client(1225763245, {
-  websocket_address: "ws://127.0.0.1:19133",
+  websocket_address: config.websocket_address,
+  accent_token: config.websocket_auth_token,
 });
 
-client.on("message.group.normal", (msg) => {
-  if (msg.raw_message == "你好，Kam") {
-    console.log(msg.reply);
-    msg.reply("Hiiiiiiiiiiiiiiiiiiiiiiiiiii");
-  }
-});
+client.logger.logger = global['logger'] = ui.logger as any;
 
+export default client;
+
+InitializeTerminal();
+await InitializePrettyFeedback();
+await InitializePluginManager();
 client.Start();
