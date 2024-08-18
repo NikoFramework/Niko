@@ -1,25 +1,39 @@
+/**
+ * 
+ *           框架入口
+ * 
+ */
+
 import { Client } from "onebot-client-next";
 
-import { cliui } from "@poppinss/cliui";
-import InitializeConfig from "./config.ts";
-import InitializeTerminal from "./terminal.ts";
+import { cliui, colors } from "@poppinss/cliui";
+
+import config from "./config.ts";
+import Terminal from "./terminal.ts";
 import InitializePluginManager from "./plugin_manager.ts";
-import InitializePrettyFeedback from "./pretty_feedback.ts";
+import PrettyFeedback from "./pretty_feedback.ts";
 
-export const ui = cliui({ mode: "normal" });
+const logger = cliui({ mode: "normal" }).logger.useColors(colors.raw());
 
-InitializeConfig();
-
-const client = new Client(1225763245, {
-  websocket_address: config.websocket_address,
-  accent_token: config.websocket_auth_token,
+Object.defineProperty(global, "logger", {
+  value: logger,
+  writable: false,
+  enumerable: true,
+  configurable: true,
 });
 
-client.logger.logger = global['logger'] = ui.logger as any;
+await Terminal(); // Initialize logger
+await PrettyFeedback(); // Initialize headless browser
+
+const client = new Client(1225763245, {
+  websocket_address: config().websocket_address,
+  accent_token: config().websocket_auth_token,
+});
+
+// Has method as same as the console has.
+client.logger.logger = global.logger as any;
 
 export default client;
 
-InitializeTerminal();
-await InitializePrettyFeedback();
 await InitializePluginManager();
 client.Start();

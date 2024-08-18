@@ -1,24 +1,38 @@
+/**
+ * 
+ *           插件管理器
+ * 
+ */
+
+import { Client, MessageEvent, TElements } from "onebot-client-next";
+
 import fs from "node:fs/promises";
 import path from "node:path";
-import client from "core";
-import { Client, MessageEvent, TElements } from "onebot-client-next";
 import ShellParser from "shell-quote";
 
-export default async function InitializePluginManager() {
-  global['plugin_manager'] = PluginManager.Initialize();
-}
+import client from ".";
+import config from "Niko/config";
+
+export default async () => PluginManager.Initialize();
 
 export class PluginManager {
-  static Initialize() {
-    return new PluginManager();
+   // Initialize single instance
+  public static Initialize() {
+    if (!PluginManager.instance) {
+      PluginManager.instance = new PluginManager();
+    }
+
+    return PluginManager.instance;
   }
+
+  /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
   public static readonly PLUGIN_DIR = path.resolve(process.cwd(), "plugin");
 
-  public unloadedList = new Set<string>();
-  public loadedPluginMap = new Map<string, Plugin>();
-  public enabledPluginMap = new Map<number, Set<string>>();
+  private unloadedList = new Set<string>();
+  private loadedPluginMap = new Map<string, Plugin>();
 
+  private static instance: PluginManager;
   private constructor() {
     this.LoadPlugins();
     this.EventProcessor();
@@ -70,23 +84,11 @@ export class PluginManager {
   private GroupEventProcessor(message: MessageEvent.TGroupMessageEvent) {
     const { group_id, message: msgBlocks, raw_message } = message;
 
-    if (!this.IsValidMessage(msgBlocks) || !raw_message.startsWith(config.triggle_token)) {
+    if (!this.IsValidMessage(msgBlocks) || !raw_message.startsWith(config().triggle_token)) {
       return;
     }
 
-    const [command, ...args] = ShellParser.parse(raw_message.slice(config.triggle_token.length));
-
-    const enableList = this.enabledPluginMap.get(group_id);
-    enableList?.forEach((pluginName) => {
-      this.loadedPluginMap
-        .get(pluginName)
-        ?.RegisteredCommand.get(command as string)
-        ?.callback.call(client, args, message);
-    });
-
-    if (enableList != undefined) {
-      return;
-    }
+    const [command, ...args] = ShellParser.parse(raw_message.slice(config().triggle_token.length));
 
     this.loadedPluginMap.forEach((instance) => {
       instance.RegisteredCommand.get(command as string)?.callback.call(client, args, message);

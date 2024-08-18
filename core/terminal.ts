@@ -1,8 +1,15 @@
+/**
+ * 
+ *           终端日志
+ * 
+ */
+
 import fs from "node:fs";
 import path from "node:path";
+import util from "node:util";
 
-export default function TerminalInitialize() {
-  let task = logger.action("Initializing terminal.");
+export default async function InitializeTerminal() {
+  const action = logger.action("Initializing terminal.");
 
   try {
     const logPath = path.resolve(process.cwd(), "log");
@@ -11,20 +18,22 @@ export default function TerminalInitialize() {
     const logFile = path.resolve(logPath, `${new Date().toISOString().replaceAll(/[-:TZ]/g, "")}.log`);
     const logStream = fs.createWriteStream(logFile, { flags: "a" });
 
-    // 保存原始的 process.stdout.write 方法
-    const originalWrite = process.stdout.write;
+    const oLog = console.log.bind(console);
 
-    // 重写 process.stdout.write 方法
-    process.stdout.write = ((chunk: any, encoding: BufferEncoding, callback?: (error?: Error | null) => void) => {
-      // 将输出写入日志文件
-      logStream.write(chunk, encoding, callback);
-      throw new Error;
-      // 调用原始的 stdout.write 以便在控制台输出
-      return originalWrite(chunk, encoding, callback);
-    }) as typeof process.stdout.write;
+    console.log = (...data: any[]) => {
+      logStream.write(util.format(...data) + "\n");
+      oLog(...data);
+    }
 
-    task.succeeded();
+    const oError = console.log.bind(console);
+
+    console.error = (...data: any[]) => {
+      logStream.write(util.format(...data) + "\n");
+      oError(...data);
+    }
+
+    action.succeeded();
   } catch (error) {
-    task.failed(error as Error);
+    action.failed(error as Error);
   }
 }

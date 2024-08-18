@@ -9,8 +9,7 @@
     "moduleResolution": "Bundler",
     "baseUrl": "./",
     "paths": {
-      "core/*": ["./core/*"],
-      "service/*": ["./service/*"]
+      "Niko/*": ["./core/*"],
     },
     "allowUmdGlobalAccess": true,
     "allowImportingTsExtensions": true,

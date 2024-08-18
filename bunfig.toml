@@ -1,2 +1,8 @@
+[project]
+name = "niko"
+
+[workspace]
+dir = "plugin"
+
 [plugins]
 '*.less' = './bun-less-support.ts'

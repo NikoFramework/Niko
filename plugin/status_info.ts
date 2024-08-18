@@ -1,12 +1,10 @@
 import { Client, MessageEvent, Segment } from "onebot-client-next";
 
-import { Plugin, PluginInstance } from "core/plugin_manager";
-import { DEFAULT_HTML_TEMPLATE, Generate } from "core/pretty_feedback";
+import { Plugin, PluginInstance } from "Niko/plugin_manager";
+import PrettyFeedback from "Niko/pretty_feedback";
 
 import os from "node:os";
-import fs from "node:fs";
 import si from "systeminformation";
-import path from "node:path";
 
 export default class extends Plugin implements PluginInstance {
   public PLUGIN_NAME: string = "StatusInformation";
@@ -27,45 +25,47 @@ export default class extends Plugin implements PluginInstance {
     memInfo.used /= 1073741824;
     memInfo.total /= 1073741824;
 
-    Generate(
-      `status_info.${event.group_id}`,
-      DEFAULT_HTML_TEMPLATE(
+    const instance = (await PrettyFeedback()).As(`status_info.${event.group_id}`);
+
+    instance
+      .GenerateClassicFeedback(
         "机体状态",
         /* html */ `
-    <div id="status_info">
-      <style>
-        * {
-          margin: 0;
-          font-family: "Segoe UI";
-        }
-
-        div#status_info {
-          top: 0;
-          left: 0;
-          width: calc(1920px - 32px);
-
-          font-size: larger;
-          text-align: center;
-        }
-      </style>
-      <div>
-        <p> System: ${systemName} </p>
-        <p> CPU: ${cpuName} ${
+      <div id="status_info">
+        <style>
+          * {
+            margin: 0;
+            font-family: "Segoe UI";
+          }
+  
+          div#status_info {
+            top: 0;
+            left: 0;
+            width: calc(1920px - 32px);
+  
+            font-size: larger;
+            text-align: center;
+          }
+        </style>
+        <div>
+          <p> System: ${systemName} </p>
+          <p> CPU: ${cpuName} ${
           (await si.cpuTemperature()).main
         }℃ —— 使用率 <progress value="${cpuUsage}"></progress> </p>
-        <p>
-          RAM: ${memInfo.used.toFixed(2)}GB / ${memInfo.total.toFixed(2)}GB —— 占用率
-          <progress max=${memInfo.total} value=${memInfo.used}></progress
-        ></p>
+          <p>
+            RAM: ${memInfo.used.toFixed(2)}GB / ${memInfo.total.toFixed(2)}GB —— 占用率
+            <progress max=${memInfo.total} value=${memInfo.used}></progress
+          ></p>
+        </div>
       </div>
-    </div>
-  `,
-      ),
-    ).then((buffer) => {
-      const tempImage = path.resolve(process.cwd(), "temp/temp.1.png");
-      fs.writeFileSync(tempImage, Uint8Array.from(buffer));
-      event.reply(Segment.segment.Image(`file://${tempImage}`));
-    });
+    `,
+      )
+      .then((val) => {
+        event.reply(val);
+      })
+      .catch((reason) => {
+        event.reply(reason);
+      });
   }
 }
 

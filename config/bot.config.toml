@@ -2,7 +2,4 @@ logger_level = ""
 
 websocket_address = "ws://127.0.0.1:19132"
 websocket_auth_token = "a_simple_token"
-triggle_token = "/"
-
-[enable_plugins]
-10086 = ["a", "b"]
+triggle_token = "* "
