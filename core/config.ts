@@ -11,13 +11,14 @@ import FileSystem from "node:fs";
 export default () => Config.Initialize();
 
 export type ConfigStruct = {
+  account_id: number;
   websocket_address: string;
   websocket_auth_token: string;
 
   triggle_token: string;
 };
 
-export class Config {
+export class Config<A extends object = ConfigStruct> {
   // Initialize single instance
   public static Initialize() {
     if (!Config.instance) {
@@ -31,7 +32,7 @@ export class Config {
 
   private configFile = path.resolve(process.cwd(), "config/bot.config.toml");
 
-  private data = {} as ConfigStruct;
+  private data = {} as A;
 
   private static instance: Config;
   private constructor(file?: string) {
@@ -48,14 +49,14 @@ export class Config {
     });
   }
 
-  public From(configFile: string) {
-    return new Config(configFile);
+  public From<B extends object>(configFile: string) {
+    return new Config<B>(configFile);
   }
 
   public LoadConfig() {
     try {
       const rawData = FileSystem.readFileSync(this.configFile).toString("utf8");
-      this.data = toml.parse(rawData) as ConfigStruct;
+      this.data = toml.parse(rawData) as A;
     } catch {
       logger.error("Invalid format of config file. Shall we try again? ");
     }

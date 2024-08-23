@@ -1,5 +1,6 @@
 {
   "name": "niko",
+  "license": "MPL-2.0",
   "private": true,
   "version": "1.0.0",
   "description": "A Bot.",
@@ -13,7 +14,6 @@
     "QQ"
   ],
   "author": "Kamenomi",
-  "license": "UNLICENSED",
   "workspaces": [
     "plugin/*"
   ],

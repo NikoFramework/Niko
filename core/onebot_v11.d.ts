@@ -65,7 +65,7 @@ declare namespace OnebotStandard {
     };
   }
 
-  enum ForwardWebsocketFailedCode {
+  export enum ForwardWebsocketFailedCode {
     // Retcode = HTTP status
     1400 = 400,
     1401 = 401,
@@ -73,19 +73,25 @@ declare namespace OnebotStandard {
     1404 = 404,
   }
 
-  type ApiResponse = /* success */ {
-    status: "ok";
-    retcode: 0;
-    data: Events.Base | null;
-  } & /* async */ {
-    status: "async";
-    retcode: 1;
-    data: null;
-  } & /* failure */ {
-    status: "failed";
-    retcode: keyof typeof ForwardWebsocketFailedCode;
-    data: null;
-  };
+  export type ApiResponse = /* success */
+    | {
+        status: "ok";
+        retcode: 0;
+        data: Events.Base | null;
+        echo: number;
+      }
+    | /* async */ {
+        status: "async";
+        retcode: 1;
+        data: null;
+        echo: number;
+      }
+    | /* failure */ {
+        status: "failed";
+        retcode: keyof typeof ForwardWebsocketFailedCode;
+        data: null;
+        echo: number;
+      };
 
   export type Apis = {
     /**
@@ -307,35 +313,35 @@ declare namespace OnebotStandard {
         user_id: number;
         comment: string;
         flag: string;
-      }
+      };
 
       export type Friend = Base & {
         request_type: "friend";
-      }
+      };
 
       export type Group = Base & {
         request_type: "group";
         sub_type: "add" | "invite";
-        group_id: number
-      }
+        group_id: number;
+      };
     }
 
     export namespace Meta {
       export type Base = Events.Base & {
         post_type: "meta_event";
         meta_event_type: "lifecycle" | "heartbeat";
-      }
+      };
 
-      export type Lifecycle	= Base & {
-        meta_event_type: "lifecycle"
-        sub_type: "enable" | "disable" | "connect"
-      }
+      export type Lifecycle = Base & {
+        meta_event_type: "lifecycle";
+        sub_type: "enable" | "disable" | "connect";
+      };
 
       export type Heartbeat = Base & {
         meta_event_type: "heartbeat";
         status: Defines.Status;
         interval: number;
-      }
+      };
     }
   }
 
@@ -779,4 +785,4 @@ declare namespace OnebotStandard {
   export type Message = string | Segment.Segments | Array<string | Segment.Segments>;
 }
 
-export {}
+export { OnebotStandard };

@@ -1,5 +1,4 @@
-logger_level = ""
-
+account_id = 1225763245
 websocket_address = "ws://127.0.0.1:19132"
 websocket_auth_token = "a_simple_token"
 triggle_token = "* "
