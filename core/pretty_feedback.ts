@@ -79,7 +79,7 @@ export class PrettyFeedback {
       context = markdownWriter.render(markdownRender.parse(context));
     }
 
-    const base64_url = (await this.RenderHtmlToImage(this.GenerateTemplateHtml(title, context))).toString("base64url");
+    const base64_url = (await this.RenderHtmlToImage(this.GenerateTemplateHtml(title, context))).toString("base64");
     return Segment.segment.Image("base64://" + base64_url);
   }
 

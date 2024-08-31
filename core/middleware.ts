@@ -4,6 +4,7 @@
  *
  */
 
+import _ from "lodash";
 import { MessageContext } from "./native";
 
 export default () => Middleware.Initialize();
@@ -28,17 +29,27 @@ export class Middleware {
 
     return () => {
       delete this.middlewareList[newLength - 1];
-    }
+    };
   }
 
-  public ExecMiddlewares(Context: MessageContext) {
+  public Execute(Context: MessageContext) {
     let index = 0;
 
     const Next = () => {
-      let current = this.middlewareList[index++];
+      let Current = this.middlewareList[index++];
 
-      if (current) {
-        return current(Context, Next);
+      if (Current) {
+        try {
+          if (!_.isFunction(Current)) {
+            logger.warning(`The middleware is not a function at [array.${index}]. `);
+
+            throw new Error("Jmp next. ");
+          }
+
+          return Current(Context, Next);
+        } catch {
+          return Next();
+        }
       } else {
         return true;
       }

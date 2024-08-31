@@ -10,9 +10,9 @@ import { cliui, colors } from "@poppinss/cliui";
 
 import config from "./config.ts";
 import Terminal from "./terminal.ts";
-// import InitializePluginManager from "./plugin_manager.ts";
+import PluginManager from "./plugin_manager.ts";
 import PrettyFeedback from "./pretty_feedback.ts";
-import native, { GroupMessageContext } from "./native.ts";
+import Native from "./native.ts";
 import middleware from "./middleware.ts";
 
 const logger = cliui({ mode: "normal" }).logger.useColors(colors.raw());
@@ -39,11 +39,12 @@ export default client;
 
 // await InitializePluginManager();
 middleware();
-native({
+const Nt = Native({
   Send: client.Send.bind(client),
-  supportQuickHandle: true,
+  supportQuickHandle: false,
 });
 
-client.connection!.on("message", native().Receive.bind(native()));
+await client.Start();
+client.connection!.on("message", Nt.Receive.bind(Nt));
 
-client.Start();
+await PluginManager();

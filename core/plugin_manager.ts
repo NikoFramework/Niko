@@ -1,22 +1,22 @@
 /**
- * 
+ *
  *           插件管理器
- * 
+ *
  */
-
-import { Client, MessageEvent, TElements } from "onebot-client-next";
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import ShellParser from "shell-quote";
 
-import client from ".";
+import client, { GroupMessageContext } from "Niko/native";
 import config from "Niko/config";
+import { OnebotStandard } from "./onebot_v11";
+import _ from "lodash";
 
 export default async () => PluginManager.Initialize();
 
 export class PluginManager {
-   // Initialize single instance
+  // Initialize single instance
   public static Initialize() {
     if (!PluginManager.instance) {
       PluginManager.instance = new PluginManager();
@@ -44,14 +44,14 @@ export class PluginManager {
 
     for (const script of scriptList) {
       if (script.isFile() && /\.(ts|js)$/.test(script.name)) {
-        await this.loadPlugin(script.name);
+        await this.LoadPlugin(script.name);
       }
     }
 
     logger.info(`Loaded ${this.loadedPluginMap.size} plugin(s), failed ${this.unloadedList.size} plugin(s)`);
   }
 
-  private async loadPlugin(fileName: string) {
+  private async LoadPlugin(fileName: string) {
     try {
       const script = await import(path.resolve(PluginManager.PLUGIN_DIR, fileName));
 
@@ -78,25 +78,37 @@ export class PluginManager {
   }
 
   private EventProcessor() {
-    client.on("message.group.normal", this.GroupEventProcessor.bind(this));
+    client().on("message.group", this.GroupEventProcessor.bind(this));
   }
 
-  private GroupEventProcessor(message: MessageEvent.TGroupMessageEvent) {
-    const { group_id, message: msgBlocks, raw_message } = message;
+  private GroupEventProcessor(message: Pretty<GroupMessageContext>) {
+    const { message: messages, content } = message;
 
-    if (!this.IsValidMessage(msgBlocks) || !raw_message.startsWith(config().triggle_token)) {
+    if (!this.IsValidMessage(messages) || !content.startsWith(config().triggle_token)) {
       return;
     }
 
-    const [command, ...args] = ShellParser.parse(raw_message.slice(config().triggle_token.length));
+    const [command, ...args] = ShellParser.parse(content.slice(config().triggle_token.length));
 
     this.loadedPluginMap.forEach((instance) => {
-      instance.RegisteredCommand.get(command as string)?.callback.call(client, args, message);
+      instance.RegisteredCommand.get(command as string)?.callback.call(null, args, message);
     });
   }
 
-  private IsValidMessage(blocks: TElements) {
-    return typeof blocks === "string" || (Array.isArray(blocks) ? blocks[0]?.type === "text" : blocks.type === "text");
+  private IsValidMessage(blocks: OnebotStandard.Message) {
+    if (_.isArray(blocks)) {
+      if (typeof blocks?.[0] == "string") return true;
+
+      if (blocks?.[0].type == "text") return true;
+
+      return false;
+    }
+
+    if (typeof blocks == "string") return true;
+
+    if (Object.hasOwn(blocks, "type")) return blocks.type == "text";
+
+    return false;
   }
 }
 
@@ -106,19 +118,15 @@ export interface PluginInstance extends Plugin {
   PLUGIN_AUTHOR?: string;
 }
 
-export type CommandCallback<T extends MessageEvent.TBaseEvent> = (
-  this: Client,
-  argument: ShellParser.ParseEntry[],
-  message: T,
-) => void;
+export type CommandCallback = (argument: ShellParser.ParseEntry[], message: any) => void;
 
-export type PluginCommand<T extends MessageEvent.TBaseEvent> = {
+export type PluginCommand = {
   name: string;
-  callback: CommandCallback<T>;
+  callback: CommandCallback;
 };
 
 export class Plugin {
-  protected registeredCommand = new Map<string, PluginCommand<any>>();
+  protected registeredCommand = new Map<string, PluginCommand>();
 
   get RegisteredCommand() {
     return this.registeredCommand;
@@ -126,7 +134,7 @@ export class Plugin {
 
   constructor() {}
 
-  protected RegisterCommand(info: PluginCommand<any>) {
+  protected RegisterCommand(info: PluginCommand) {
     this.registeredCommand.set(info.name, info);
   }
 }

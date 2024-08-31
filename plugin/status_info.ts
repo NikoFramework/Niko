@@ -1,10 +1,9 @@
-import { Client, MessageEvent, Segment } from "onebot-client-next";
-
 import { Plugin, PluginInstance } from "Niko/plugin_manager";
 import PrettyFeedback from "Niko/pretty_feedback";
 
 import os from "node:os";
 import si from "systeminformation";
+import { GroupMessageContext } from "Niko/native";
 
 export default class extends Plugin implements PluginInstance {
   public PLUGIN_NAME: string = "StatusInformation";
@@ -19,13 +18,13 @@ export default class extends Plugin implements PluginInstance {
     });
   }
 
-  private async fn(this: Client, args: any, event: MessageEvent.TGroupMessageEvent) {
+  private async fn(args: any, event: GroupMessageContext) {
     const memInfo = await si.mem();
 
     memInfo.used /= 1073741824;
     memInfo.total /= 1073741824;
 
-    const instance = (await PrettyFeedback()).As(`status_info.${event.group_id}`);
+    const instance = (await PrettyFeedback()).As(`status_info.${event.from}`);
 
     instance
       .GenerateClassicFeedback(
