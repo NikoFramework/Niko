@@ -8,12 +8,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import ShellParser from "shell-quote";
 
+import _ from "lodash";
 import client, { GroupMessageContext } from "Niko/native";
 import config from "Niko/config";
 import { OnebotStandard } from "./onebot_v11";
-import _ from "lodash";
 
-export default async () => PluginManager.Initialize();
+export default () => PluginManager.Initialize();
 
 export class PluginManager {
   // Initialize single instance
@@ -29,34 +29,43 @@ export class PluginManager {
 
   public static readonly PLUGIN_DIR = path.resolve(process.cwd(), "plugin");
 
-  private unloadedList = new Set<string>();
-  private loadedPluginMap = new Map<string, Plugin>();
+  private readonly loadedMap = new Map<string, Plugin>();
+  private readonly unloadedList = new Set<string>();
 
   private static instance: PluginManager;
   private constructor() {
-    this.LoadPlugins();
     this.EventProcessor();
   }
 
-  private async LoadPlugins() {
-    await fs.mkdir(PluginManager.PLUGIN_DIR, { recursive: true });
-    const scriptList = await fs.readdir(PluginManager.PLUGIN_DIR, { withFileTypes: true });
+  public async LoadPlugins() {
+    const action = globalLogger.action(">>> Load Plugins");
 
-    for (const script of scriptList) {
-      if (script.isFile() && /\.(ts|js)$/.test(script.name)) {
+    try {
+      await fs.mkdir(PluginManager.PLUGIN_DIR, { recursive: true });
+      const scriptList = await fs.readdir(PluginManager.PLUGIN_DIR, { withFileTypes: true });
+
+      for (const script of scriptList) {
+        if (!script.isFile() || !/\.(ts|js)$/.test(script.name)) {
+          continue;
+        }
+
         await this.LoadPlugin(script.name);
       }
+    } catch (error) {
+      action.failed(error as Error);
+      return;
     }
 
-    logger.info(`Loaded ${this.loadedPluginMap.size} plugin(s), failed ${this.unloadedList.size} plugin(s)`);
+    globalLogger.info(`Loaded ${this.loadedMap.size} plugin(s), failed ${this.unloadedList.size} plugin(s)`);
+    action.succeeded();
   }
 
-  private async LoadPlugin(fileName: string) {
+  public async LoadPlugin(fileName: string) {
     try {
-      const script = await import(path.resolve(PluginManager.PLUGIN_DIR, fileName));
+      const script = await import(path.resolve(PluginManager.PLUGIN_DIR, "./" + fileName));
 
       if (!script.default || Object.getPrototypeOf(script.default) != Plugin) {
-        logger.debug(
+        globalLogger.error(
           `Failed to import plugin ${fileName}: The plugin hasn't default export or isn't a subclass of Plugin.`,
         );
         this.unloadedList.add(fileName);
@@ -65,16 +74,16 @@ export class PluginManager {
 
       const instance = new script.default() as PluginInstance;
 
-      this.loadedPluginMap.set(fileName, instance);
-      logger.success(`Loaded ${instance.PLUGIN_NAME} ${instance.PLUGIN_VERSION}`);
+      this.loadedMap.set(fileName, instance);
+      globalLogger.success(`Loaded plugin ${instance.PLUGIN_NAME} ${instance.PLUGIN_VERSION}`);
     } catch (error) {
-      logger.debug(`Failed to import plugin ${fileName}: ${JSON.stringify(error)}`);
       this.unloadedList.add(fileName);
+      globalLogger.error(`Failed to import plugin ${fileName}: ${JSON.stringify(error)}`);
     }
   }
 
   public UnloadPlugin(pluginName: string) {
-    this.loadedPluginMap.delete(pluginName);
+    this.loadedMap.delete(pluginName);
   }
 
   private EventProcessor() {
@@ -90,7 +99,7 @@ export class PluginManager {
 
     const [command, ...args] = ShellParser.parse(content.slice(config().triggle_token.length));
 
-    this.loadedPluginMap.forEach((instance) => {
+    this.loadedMap.forEach((instance) => {
       instance.RegisteredCommand.get(command as string)?.callback.call(null, args, message);
     });
   }

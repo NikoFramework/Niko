@@ -1,4 +1,4 @@
-import { Plugin, PluginInstance } from "Niko/plugin_manager";
+import { Plugin, PluginInstance } from "Niko/plugin";
 import PrettyFeedback from "Niko/pretty_feedback";
 
 import os from "node:os";

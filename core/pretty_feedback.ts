@@ -15,7 +15,7 @@ var markdownWriter = new markdown.HtmlRenderer();
 
 export default async function InitializePrettyFeedback() {
   if (!PrettyFeedback.browser) {
-    const task = logger.action("Launching puppeteer. ");
+    const task = globalLogger.action("Launching puppeteer. ");
 
     try {
       PrettyFeedback.browser = await puppeteer.launch({
@@ -91,11 +91,11 @@ export class PrettyFeedback {
     PrettyFeedback.queueList.add(this.initiator);
 
     const beginTime = new Date().valueOf();
-    logger.debug(`Begin rendering. ${this.initiator}`);
+    globalLogger.debug(`Begin rendering. ${this.initiator}`);
 
     try {
       const result = await this.NativeGenerateHtmlToImage(context);
-      logger.debug("Rendered! Spent " + (new Date().valueOf() - beginTime) + "ms. ");
+      globalLogger.debug("Rendered! Spent " + (new Date().valueOf() - beginTime) + "ms. ");
 
       return result;
     } catch (error) {

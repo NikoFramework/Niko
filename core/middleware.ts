@@ -4,28 +4,86 @@
  *
  */
 
-import _ from "lodash";
 import { MessageContext } from "./native";
 
-export default () => Middleware.Initialize();
+import _ from "lodash";
+import fs from "node:fs/promises";
+import path from "node:path";
 
-export class Middleware {
+export default () => MiddlewareManager.Initialize();
+
+export class MiddlewareManager {
   // Initialize single instance
   public static Initialize() {
-    if (!Middleware.instance) {
-      Middleware.instance = new Middleware();
+    if (!MiddlewareManager.instance) {
+      MiddlewareManager.instance = new MiddlewareManager();
     }
 
-    return Middleware.instance;
+    return MiddlewareManager.instance;
   }
 
-  public readonly middlewareList = new Array<MiddlewareCallback>();
+  public static readonly MIDDLEWARE_DIR = path.resolve(process.cwd(), "middleware");
 
-  private static instance: Middleware;
-  private constructor() {}
+  public readonly middlewareList = new Array<MiddlewareCallback>();
+  private readonly loadedMap = new Map<string, Middleware>();
+  private readonly unloadedList = new Set<string>();
+
+  public static instance: MiddlewareManager;
+  private constructor() {
+  }
+
+  public async LoadMiddlewares() {
+    const action = globalLogger.action(">>> Load Middlewares");
+
+    try {
+      await fs.mkdir(MiddlewareManager.MIDDLEWARE_DIR, { recursive: true });
+      const middlewareList = await fs.readdir(MiddlewareManager.MIDDLEWARE_DIR, { withFileTypes: true });
+
+      for (const script of middlewareList) {
+        if (script.isFile() && /\.(ts|js)$/.test(script.name)) {
+          await this.LoadMiddleware(script.name);
+        }
+      }
+    } catch (error) {
+      action.failed(error as Error);
+      return;
+    }
+
+    globalLogger.info(`Loaded ${this.loadedMap.size} middleware(s), failed ${this.unloadedList.size} middleware(s)`);
+    globalLogger.info(`Total middlware function(s): ${this.middlewareList.length}. `);
+    action.succeeded();
+  }
+
+  public async LoadMiddleware(fileName: string) {
+    try {
+      const script = await import(path.resolve(MiddlewareManager.MIDDLEWARE_DIR, "./" + fileName));
+
+      if (!script.default || Object.getPrototypeOf(script.default) != Middleware) {
+        globalLogger.error(
+          `Failed to import middleware ${fileName}: The middleware hasn't default export or isn't a subclass of middleware.`,
+        );
+        this.unloadedList.add(fileName);
+        return;
+      }
+
+      const instance = new script.default(this.Patch.bind(this)) as MiddlewareInstance;
+
+      this.loadedMap.set(fileName, instance);
+      globalLogger.success(`Loaded middleware ${instance.MIDDLEWARE_NAME} ${instance.MIDDLEWARE_VERSION}`);
+    } catch (error) {
+      this.unloadedList.add(fileName);
+      globalLogger.error(`Failed to import middleware ${fileName}: ${JSON.stringify(error)}`);
+    }
+  }
+
+  public UnloadMiddleware(middlewareName: string) {
+    this.loadedMap.delete(middlewareName);
+  }
 
   public Patch(func: MiddlewareCallback) {
     const newLength = this.middlewareList.push(func);
+
+    globalLogger.debug("A new middleware has loaded. ");
 
     return () => {
       delete this.middlewareList[newLength - 1];
@@ -41,7 +99,7 @@ export class Middleware {
       if (Current) {
         try {
           if (!_.isFunction(Current)) {
-            logger.warning(`The middleware is not a function at [array.${index}]. `);
+            globalLogger.warning(`The middleware is not a function at [array.${index}]. `);
 
             throw new Error("Jmp next. ");
           }
@@ -59,4 +117,15 @@ export class Middleware {
   }
 }
 
-type MiddlewareCallback = (Context: MessageContext, Next: Function) => any;
+export type MiddlewareCallback = (Context: MessageContext, Next: Function) => any;
+export type Dispose = () => void;
+
+export interface MiddlewareInstance extends Middleware {
+  MIDDLEWARE_NAME: string;
+  MIDDLEWARE_VERSION: string;
+  MIDDLEWARE_AUTHOR?: string;
+}
+
+export class Middleware {
+  public constructor() {}
+}

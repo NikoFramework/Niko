@@ -4,10 +4,10 @@ import fs from "fs";
 import path from "path";
 
 import PrettyFeedback from "Niko/pretty_feedback";
-import { Plugin, PluginInstance } from "Niko/plugin_manager";
+import { Plugin, PluginInstance } from "Niko/plugin";
 
 export default class extends Plugin implements PluginInstance {
-  public PLUGIN_NAME: string = "StatusInformation";
+  public PLUGIN_NAME: string = "Markdown";
   public PLUGIN_VERSION: string = "v1.0.0-dev";
 
   public constructor() {

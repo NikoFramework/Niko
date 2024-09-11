@@ -6,45 +6,51 @@
 
 import { Client } from "onebot-client-next";
 
-import { cliui, colors } from "@poppinss/cliui";
+import { cliui } from "@poppinss/cliui";
 
-import config from "./config.ts";
-import Terminal from "./terminal.ts";
-import PluginManager from "./plugin_manager.ts";
-import PrettyFeedback from "./pretty_feedback.ts";
+import config, { Config } from "./config.ts";
+import Utils from "./utils.ts";
 import Native from "./native.ts";
-import middleware from "./middleware.ts";
+import Terminal from "./terminal.ts";
+import PluginManager from "./plugin.ts";
+import MiddlewareManager from "./middleware.ts";
+import PrettyFeedback from "./pretty_feedback.ts";
 
-const logger = cliui({ mode: "normal" }).logger.useColors(colors.raw());
+const logger = cliui({ mode: "normal" }).logger;
+logger.debug = () => {};
 
-Object.defineProperty(global, "logger", {
-  value: logger,
-  writable: false,
-  enumerable: true,
-  configurable: true,
-});
+global["globalLogger"] = logger;
 
-await Terminal(); // Initialize logger
+global["niko"] = {
+  logger: logger,
+  config: {
+    prototype: Config,
+    ...config(),
+  },
+};
+
+Utils.LockObjectProperty(global, "niko");
+
+Terminal(); // Initialize logger
 await PrettyFeedback(); // Initialize headless browser
 
-const client = new Client(config().account_id, {
-  websocket_address: config().websocket_address,
-  accent_token: config().websocket_auth_token,
+const client = new Client(niko.config.account_id, {
+  websocket_address: niko.config.websocket_address,
+  accent_token: niko.config.websocket_auth_token,
 });
 
 // Has method as same as the console has.
-client.logger.logger = global.logger as any;
+client.logger.logger = globalLogger as any;
 
 export default client;
 
-// await InitializePluginManager();
-middleware();
 const Nt = Native({
   Send: client.Send.bind(client),
   supportQuickHandle: false,
 });
 
+await MiddlewareManager().LoadMiddlewares();
+await PluginManager().LoadPlugins();
+
 await client.Start();
 client.connection!.on("message", Nt.Receive.bind(Nt));
-
-await PluginManager();

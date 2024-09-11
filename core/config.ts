@@ -58,7 +58,7 @@ export class Config<A extends object = ConfigStruct> {
       const rawData = FileSystem.readFileSync(this.configFile).toString("utf8");
       this.data = toml.parse(rawData) as A;
     } catch {
-      logger.error("Invalid format of config file. Shall we try again? ");
+      globalLogger.error("Invalid format of config file. Shall we try again? ");
     }
   }
 }

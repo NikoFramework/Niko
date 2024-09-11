@@ -61,7 +61,7 @@ export class Native extends EventEmitter<keyof Events> {
 
       this.on(".native_data", messageHandler);
       this.Send({ action, params, echo: timestamp });
-      logger.debug(JSON.stringify({ action, params, echo: timestamp }));
+      globalLogger.debug(JSON.stringify({ action, params, echo: timestamp }));
     });
   }
 
@@ -76,7 +76,7 @@ export class Native extends EventEmitter<keyof Events> {
         // const error = data as OnebotStandard.ApiResponse & { status: "failed" };
 
         this.supportQuickHandle = false;
-        logger.warning(
+        globalLogger.warning(
           `The current robot protocol side does not support quick handle operations, and the framework will be compatible with this. `,
         );
       }
@@ -142,13 +142,13 @@ export class Native extends EventEmitter<keyof Events> {
     try {
       var rawEvent = JSON.parse(rawData.toString()) as OnebotStandard.Events.Base;
     } catch {
-      logger.error("Unknown received data. ");
+      globalLogger.error("Unknown received data. ");
       return;
     }
 
     this.emit(".native_data", rawEvent);
 
-    logger.debug(`${rawEvent.post_type} event received. `);
+    globalLogger.debug(`${rawEvent.post_type} event received. `);
 
     switch (rawEvent.post_type) {
       case "message": {
@@ -174,7 +174,7 @@ export class Native extends EventEmitter<keyof Events> {
         };
 
         messageContext.forward = () => {
-          logger.warning(`Forward method hasn't implement yet! `);
+          globalLogger.warning(`Forward method hasn't implement yet! `);
         };
 
         if (message.message_type == "group") {
@@ -315,7 +315,7 @@ export class Native extends EventEmitter<keyof Events> {
         break;
       }
       default: {
-        logger.warning(`Unsupport event: ${rawEvent.post_type}. `);
+        globalLogger.warning(`Unsupport event: ${rawEvent.post_type}. `);
         break;
       }
     }
