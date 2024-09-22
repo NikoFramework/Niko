@@ -1,0 +1,29 @@
+{
+  "extends": "@tsconfig/strictest/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+
+    "forceConsistentCasingInFileNames": true,
+
+    "baseUrl": "./",
+    "paths": {
+      "$./*": ["./core/*"],
+      "$.utils/*": ["./core/utils/*"],
+      "$.config/*": ["./config/*"]
+    },
+    "typeRoots": ["node_modules/@types"],
+
+    "noEmit": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Bundler",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+  },
+
+  "include": ["core/**/*.*.ts", "core/defines/global.d.ts", "core/utils/config.ts"]
+}

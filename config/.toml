@@ -1,0 +1,13 @@
+[general]
+bot_id=10086
+
+[connection]
+type="forward" #forward/reverse/http
+access_token=""
+server_address=""
+
+[connection.http]
+provider_port=0
+
+[connection.websocket_reverse]
+provider_port=0
