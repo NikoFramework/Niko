@@ -7,6 +7,7 @@
 /// <reference path="logger.d.ts"/>
 
 declare global {
+  declare type OneAndMore<T> = T | Array<T>
   declare type PrettyStruct<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
 }
 
