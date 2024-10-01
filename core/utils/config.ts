@@ -3,7 +3,7 @@ import TOML from "smol-toml";
 import fs, { Stats } from "node:fs";
 
 export class Config<O extends object = any, T = Partial<O>> {
-  private static logger = logger.child({ modules: ["utils", "config"] });
+  private static logger = Niko.logger.child({ modules: ["utils", "config"] });
 
   private fileExt: string;
   private cache = {} as T;

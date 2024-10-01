@@ -3,8 +3,7 @@
  * that integrates all global declarations.
  */
 
-/// <reference path="general.d.ts"/>
-/// <reference path="logger.d.ts"/>
+/// <reference path="entry.d.ts"/>
 
 declare global {
   declare type OneAndMore<T> = T | Array<T>
