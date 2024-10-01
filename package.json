@@ -6,10 +6,10 @@
     "url": "https://github.com/kamenomi-dev"
   },
   "type": "module",
-  "module": "./core/index.ts",
+  "module": "./core/entry.ts",
   "scripts": {
     "clrlogs": "cmd /C del ./logs/*.* /Q",
-    "start": "bun ./core/index.ts"
+    "start": "bun ./core/entry.ts"
   },
   "dependencies": {
     "@tsconfig/strictest": "^2.0.5",
