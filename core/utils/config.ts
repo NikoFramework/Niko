@@ -1,7 +1,7 @@
 import TOML from "smol-toml";
 
 import fs, { Stats } from "node:fs";
-
+console.log(2);
 export class Config<O extends object = any, T = Partial<O>> {
   private static logger = Niko.logger.child({ modules: ["utils", "config"] });
 
