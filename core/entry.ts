@@ -1,73 +1,34 @@
 /// <reference path="./defines/index.d.ts"/>
 
+import _ from "lodash";
+import { Logger } from "winston";
+
 import packageJson from "../package.json";
 
-import _ from "lodash";
-import { createLogger, format, Logger, transports } from "winston";
-
-global["Niko"] = Object.create({});
-
-((/* Logger Initialization */) => {
-  const { combine, colorize, printf, uncolorize, timestamp } = format;
-
-  global.Niko["logger"] = <any>createLogger({
-    defaultMeta: { projectName: "NikoNext" },
-    level: "info",
-    format: combine(
-      colorize(),
-      timestamp(),
-      printf(({ level, message, modules, projectName, timestamp }) => {
-        var label = projectName as string;
-
-        const type = typeof modules;
-        if (type == "string") {
-          label = [projectName, modules].join(".");
-        }
-
-        if (Array.isArray(modules)) {
-          label = [projectName, ...modules].map((val) => val || "<???>").join(".");
-        }
-
-        return `${timestamp} [${label}] ${level}: ${message}`;
-      })
-    ),
-    transports: [
-      new transports.Console({ handleExceptions: true, handleRejections: true }),
-      new transports.File({
-        filename: `./logs/${new Date().valueOf()}.log`,
-        format: uncolorize(),
-        handleExceptions: true,
-        handleRejections: true,
-      }),
-    ],
-  });
-
-  Object.defineProperty(global.Niko.logger, "prototype", {
-    configurable: true,
-    enumerable: true,
-    writable: false,
-    get: () => Logger,
-  });
-})();
-
-console.log(1);
-
+import "$./global";
 import { Config } from "$.utils";
 
-export namespace EntryPoint {
-  export type StructConfig = {};
-}
-
-class EntryPoint {
+export class EntryPoint {
   // Define common variable
-  public config!: Partial<EntryPoint.StructConfig> & { prototype: typeof Config };
+  // Config
+  public get config(): Partial<EntryPoint.StructConfig> {
+    return this._config?.Config || {};
+  }
 
-  // Define prototype variable
-  public readonly Logger: typeof Logger = Logger;
+  public set config(data: Partial<EntryPoint.StructConfig>) {
+    _.merge(this._config?.Config, data);
+  }
+
+  // Define prototype
   public readonly Config: typeof Config = Config;
+  /**
+   * @deprecated prefer using
+   * ```Niko.logger.child({modules: "something"})```
+   */
+  public readonly Logger: typeof Logger = Logger;
 
   // Define instance variabl
-  private _config!: Config<EntryPoint.StructConfig>;
+  private _config: Config<EntryPoint.StructConfig> | undefined;
 
   public constructor() {
     process.stdout.write(`
@@ -85,23 +46,38 @@ class EntryPoint {
 
   #Initalize() {
     this._config = Config.LoadConfig("./config/.toml");
-    Object.defineProperty(this.config, "prototype", {
-      configurable: true,
-      enumerable: true,
-      writable: false,
-      get: () => Config,
-    });
-    this.FlushConfig();
-  }
-
-  public FlushConfig() {
-    return _.merge(this.config, this._config.Config);
   }
 }
 
-const instance = new EntryPoint();
-_.merge(global.Niko, instance);
+export namespace EntryPoint {
+  export enum AdapterFileStatus {
+    enabled,
+    disabled,
+  }
 
-export default instance;
+  export enum AdapterCurrStatus {
+    running,
+    crashed,
+    waiting,
+    exited,
+  }
+
+  export type StructConfig = {
+    adapters: {
+      [props: string]: { fileStatus: keyof typeof AdapterFileStatus; currStatus: keyof typeof AdapterCurrStatus };
+    };
+  };
+}
+
+export interface EntryPointExports {
+  config: Partial<EntryPoint.StructConfig> & { prototype: typeof Config };
+
+  readonly Config: typeof Config;
+  readonly Logger: typeof Logger;
+}
+
+_.merge(global.Niko, new EntryPoint());
+
+export default global.Niko;
 
 import "$./connection";

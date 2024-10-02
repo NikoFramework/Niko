@@ -1,9 +1,15 @@
-import EntryPoint from "$./entry";
+import { type Logger } from "winston";
+
+import { type ConnectionExports } from "$./connection";
+import { type EntryPointExports } from "$./entry";
 
 declare global {
-  declare type Niko = typeof EntryPoint & {
-    logger: Logger & { prototype: typeof Logger };
-  };
+  declare type Niko = EntryPointExports &
+  ConnectionExports & {
+      logger: Logger;
+
+      adapters: Array<Adapter>;
+    };
 
   var Niko: Niko;
 }
