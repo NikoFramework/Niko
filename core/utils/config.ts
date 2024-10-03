@@ -1,3 +1,4 @@
+import { format as FormatJson } from "pretty-format";
 import TOML from "smol-toml";
 
 import fs, { Stats } from "node:fs";
@@ -21,7 +22,7 @@ export class Config<O extends object = any, T = Partial<O>> {
 
     switch (this.fileExt) {
       case "json":
-        text = JSON.stringify(struct);
+        text = FormatJson(JSON.stringify(struct));
         break;
       case "toml":
         text = TOML.stringify(struct);

@@ -1,5 +1,6 @@
 import EventEmitter from "eventemitter3";
 import FileSystem from "fs";
+import _ from "lodash";
 import Path from "path";
 
 import { type Logger } from "winston";
@@ -10,6 +11,7 @@ export abstract class Adapter {}
 
 export class Connection extends EventEmitter {
   private logger!: Logger;
+  private adapters!: Record<string, Connection.AdapterFileInformation>;
 
   public constructor() {
     super();
@@ -27,6 +29,15 @@ export class Connection extends EventEmitter {
     this.LoadAdapters();
   }
 
+  private SaveAdapters() {
+    var outputStruct = Object.create({});
+    Object.entries(this.adapters).forEach(([file, info]) => {
+      outputStruct[file] = { fileStatus: info.fileStatus };
+    });
+
+    Niko.config.adapters = outputStruct;
+  }
+
   public LoadAdapters(path?: string) {
     if (!path || !FileSystem.existsSync(path)) {
       if (!path) {
@@ -37,7 +48,7 @@ export class Connection extends EventEmitter {
     }
 
     var files = FileSystem.readdirSync(path, { withFileTypes: true }).filter(Boolean);
-    var adapterList = Niko.config.adapters || {};
+    var adapters = Niko.config.adapters || {};
 
     for (let index = 0; index < files.length; index++) {
       const file = files[index]!;
@@ -50,28 +61,67 @@ export class Connection extends EventEmitter {
         continue;
       }
 
-      var status = adapterList[file.name];
+      var status = adapters[file.name]; // shallow copy
       if (status) {
+        adapters[file.name]!.isExist = true;
+        
         if (status.fileStatus == "disabled") {
           this.logger.debug("A adapter - %s is disabled!", file.name);
           continue;
         }
 
-        adapterList[file.name]!.currStatus = "waiting";
+        adapters[file.name]!.currStatus = "waiting";
 
         this.logger.debug("Found a adapter - %s!", file.name);
       } else {
-        adapterList[file.name] = {
+        adapters[file.name] = {
+          isExist: true,
           fileStatus: "enabled",
           currStatus: "waiting",
         };
 
         this.logger.debug("A new adapter - %s is detected!", file.name);
       }
+
+      adapters = _.transform(adapters, (result, info, file) => {
+        if (info.isExist) {
+          result[file] = info;
+        }
+      });
+
+      this.adapters = adapters;
+      this.SaveAdapters();
     }
   }
 
-  public LoadAdapter(adapter: Adapter) {}
+  public LoadAdapter(adapterScript: string) {}
+}
+
+export namespace Connection {
+  export enum AdapterFileStatus {
+    enabled,
+    disabled,
+  }
+
+  export enum AdapterCurrStatus {
+    running,
+    crashed,
+    waiting,
+    exited,
+  }
+
+  export type AdapterFileInformation = {
+    fileStatus: keyof typeof AdapterFileStatus;
+
+    /**
+     * @private internal variable.
+     */
+    currStatus: keyof typeof AdapterCurrStatus;
+    /**
+     * @private internal variable.
+     */
+    isExist: boolean;
+  };
 }
 
 export interface ConnectionExports {
@@ -84,9 +134,9 @@ export interface ConnectionExports {
 
   /**
    * LoadAdapter
-   * @param adapter 适配器原型类
+   * @param adapterScript 适配器原型类
    */
-  LoadAdapter: (adapter: Adapter) => void;
+  LoadAdapter: (adapterScript: string) => void;
 }
 
 export default new Connection();

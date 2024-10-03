@@ -7,6 +7,7 @@ import packageJson from "../package.json";
 
 import "$./global";
 import { Config } from "$.utils";
+import { Connection } from "$./connection";
 
 export class EntryPoint {
   // Define common variable
@@ -50,27 +51,15 @@ export class EntryPoint {
 }
 
 export namespace EntryPoint {
-  export enum AdapterFileStatus {
-    enabled,
-    disabled,
-  }
-
-  export enum AdapterCurrStatus {
-    running,
-    crashed,
-    waiting,
-    exited,
-  }
-
   export type StructConfig = {
     adapters: {
-      [props: string]: { fileStatus: keyof typeof AdapterFileStatus; currStatus: keyof typeof AdapterCurrStatus };
+      [props: string]: Connection.AdapterFileInformation
     };
   };
 }
 
 export interface EntryPointExports {
-  config: Partial<EntryPoint.StructConfig> & { prototype: typeof Config };
+  config: Partial<EntryPoint.StructConfig>;
 
   readonly Config: typeof Config;
   readonly Logger: typeof Logger;
@@ -81,3 +70,4 @@ _.merge(global.Niko, new EntryPoint());
 export default global.Niko;
 
 import "$./connection";
+

@@ -7,8 +7,6 @@ declare global {
   declare type Niko = EntryPointExports &
   ConnectionExports & {
       logger: Logger;
-
-      adapters: Array<Adapter>;
     };
 
   var Niko: Niko;
