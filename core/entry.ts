@@ -5,9 +5,9 @@ import { Logger } from "winston";
 
 import packageJson from "../package.json";
 
+import { Connection } from "$./connection";
 import "$./global";
 import { Config } from "$.utils";
-import { Connection } from "$./connection";
 
 export class EntryPoint {
   // Define common variable
@@ -52,8 +52,9 @@ export class EntryPoint {
 
 export namespace EntryPoint {
   export type StructConfig = {
+    adapterPath: string;
     adapters: {
-      [props: string]: Connection.AdapterFileInformation
+      [props: string]: Connection.AdapterFileInformation;
     };
   };
 }
@@ -70,4 +71,3 @@ _.merge(global.Niko, new EntryPoint());
 export default global.Niko;
 
 import "$./connection";
-

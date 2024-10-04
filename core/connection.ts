@@ -11,7 +11,8 @@ export abstract class Adapter {}
 
 export class Connection extends EventEmitter {
   private logger!: Logger;
-  private adapters!: Record<string, Connection.AdapterFileInformation>;
+  private adapterCache!: Record<string, Connection.AdapterFileInformation>;
+  private adapterPath!: string;
 
   public constructor() {
     super();
@@ -29,16 +30,16 @@ export class Connection extends EventEmitter {
     this.LoadAdapters();
   }
 
-  private SaveAdapters() {
+  private SaveAdapterHistory() {
     var outputStruct = Object.create({});
-    Object.entries(this.adapters).forEach(([file, info]) => {
+    Object.entries(this.adapterCache).forEach(([file, info]) => {
       outputStruct[file] = { fileStatus: info.fileStatus };
     });
 
     Niko.config.adapters = outputStruct;
   }
 
-  public LoadAdapters(path?: string) {
+  public async LoadAdapters(path: string | undefined = Niko.config.adapterPath) {
     if (!path || !FileSystem.existsSync(path)) {
       if (!path) {
         this.logger.warning('Adapters directory does not exist! Changed to "<running-dir>/adapters/"');
@@ -47,57 +48,111 @@ export class Connection extends EventEmitter {
       path = Path.resolve(process.cwd(), "./adapters/");
     }
 
+    this.adapterPath = Niko.config.adapterPath = path;
+
     var files = FileSystem.readdirSync(path, { withFileTypes: true }).filter(Boolean);
     var adapters = Niko.config.adapters || {};
 
     for (let index = 0; index < files.length; index++) {
-      const file = files[index]!;
+      const { isFile, name } = files[index]!;
 
-      if (!file.isFile()) {
+      if (!isFile()) {
         continue;
       }
 
-      if (!file.name.match(/\.(js|ts)$/)) {
+      if (!name.match(/\.(js|ts)$/)) {
         continue;
       }
 
-      var status = adapters[file.name]; // shallow copy
+      var status = adapters[name]; // shallow copy
       if (status) {
-        adapters[file.name]!.isExist = true;
-        
+        adapters[name]!.isExist = true;
+
         if (status.fileStatus == "disabled") {
-          this.logger.debug("A adapter - %s is disabled!", file.name);
+          this.logger.debug("A adapter - %s is disabled!", name);
           continue;
         }
 
-        adapters[file.name]!.currStatus = "waiting";
+        adapters[name]!.currStatus = "waiting";
 
-        this.logger.debug("Found a adapter - %s!", file.name);
+        this.logger.debug("Found a adapter - %s!", name);
       } else {
-        adapters[file.name] = {
+        adapters[name] = {
           isExist: true,
           fileStatus: "enabled",
           currStatus: "waiting",
         };
 
-        this.logger.debug("A new adapter - %s is detected!", file.name);
+        this.logger.debug("A new adapter - %s is detected!", name);
       }
-
-      adapters = _.transform(adapters, (result, info, file) => {
-        if (info.isExist) {
-          result[file] = info;
-        }
-      });
-
-      this.adapters = adapters;
-      this.SaveAdapters();
     }
+
+    adapters = _.transform(adapters, (result, info, file) => {
+      if (info.isExist) {
+        result[file] = info;
+      }
+    });
+
+    this.adapterCache = adapters;
+    this.SaveAdapterHistory();
+
+    var asyncList = new Array<Promise<void>>();
+    Object.entries(this.adapterCache).forEach(([file]) => {
+      asyncList.push(this.LoadAdapter(file));
+    });
+
+    await Promise.all(asyncList);
+    this.adapterCache = _.transform(this.adapterCache, (result, info, file) => {
+      result[file] = info;
+
+      if (info.currStatus != "crashed") {
+        result[file].currStatus = "running";
+      }
+    });
+
+    this.emit(Connection.Events.AllAdapeterLoaded);
   }
 
-  public LoadAdapter(adapterScript: string) {}
+  private ExtractAdapterModule(data: any) {
+    if (typeof data != "object") {
+      throw new Error("It isn't a correct struct of script module exported.");
+    }
+
+    if (!Object.hasOwn(data, "default")) {
+      throw new Error("It hasn't default export! ");
+    }
+
+    if (Object.getPrototypeOf(data.default) != Adapter) {
+      throw new Error("It is not a subclass from Adapter class.");
+    }
+
+    return data.default;
+  }
+
+  public async LoadAdapter(adapterFile: string) {
+    var status = this.adapterCache[adapterFile]!;
+    const adapterScript = Path.resolve(this.adapterPath, adapterFile);
+
+    try {
+      const module = await import(adapterScript);
+      const adapter = this.ExtractAdapterModule(module);
+
+      Niko.adapters.push(new adapter(/* todo? */));
+
+      status.currStatus = "waiting";
+      this.logger.debug("A adapter - %s has completely loaded, then waiting", adapterFile);
+    } catch (error) {
+      status.currStatus = "crashed";
+      this.logger.error("A adapter - %s has crashed! because of %s .", adapterFile, (error as Error).message);
+    }
+  }
 }
 
 export namespace Connection {
+  export enum Events {
+    AllAdapeterLoaded = "connection.events.all_adapter_loaded"
+  }
+
   export enum AdapterFileStatus {
     enabled,
     disabled,
