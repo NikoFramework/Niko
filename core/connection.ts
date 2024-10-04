@@ -11,7 +11,7 @@ export abstract class Adapter {}
 
 export class Connection extends EventEmitter {
   private logger!: Logger;
-  private adapterCache!: Record<string, Connection.AdapterFileInformation>;
+  private adapterCache!: Record<string, Connection.AdapterInformation>;
   private adapterPath!: string;
 
   public constructor() {
@@ -22,7 +22,11 @@ export class Connection extends EventEmitter {
   #Initialize() {
     this.logger = Niko.logger.child({ modules: "Connection" });
 
-    Object.defineProperty(global.Niko, "adapters", new Array<Adapter>());
+    Object.defineProperty(global.Niko, "adapters", {
+      configurable: true,
+      enumerable: true,
+      get: () => Object.entries(this.adapterCache).map(([, info]) => info.instance),
+    });
 
     global.Niko.LoadAdapter = this.LoadAdapter.bind(this);
     global.Niko.LoadAdapters = this.LoadAdapters.bind(this);
@@ -66,21 +70,24 @@ export class Connection extends EventEmitter {
 
       var status = adapters[name]; // shallow copy
       if (status) {
-        adapters[name]!.isExist = true;
+        status.isExist = true;
+        status.instance = null;
 
         if (status.fileStatus == "disabled") {
+          status.currStatus = "exited";
           this.logger.debug("A adapter - %s is disabled!", name);
           continue;
         }
 
-        adapters[name]!.currStatus = "waiting";
+        status.currStatus = "waiting";
 
         this.logger.debug("Found a adapter - %s!", name);
       } else {
-        adapters[name] = {
+        status = {
           isExist: true,
           fileStatus: "enabled",
           currStatus: "waiting",
+          instance: null,
         };
 
         this.logger.debug("A new adapter - %s is detected!", name);
@@ -137,20 +144,25 @@ export class Connection extends EventEmitter {
       const module = await import(adapterScript);
       const adapter = this.ExtractAdapterModule(module);
 
-      Niko.adapters.push(new adapter(/* todo? */));
-
+      status.instance = new adapter(/* todo? */);
       status.currStatus = "waiting";
       this.logger.debug("A adapter - %s has completely loaded, then waiting", adapterFile);
     } catch (error) {
+      status.instance = null;
       status.currStatus = "crashed";
+
       this.logger.error("A adapter - %s has crashed! because of %s .", adapterFile, (error as Error).message);
     }
+  }
+
+  public UnloadAdapter() {
+    
   }
 }
 
 export namespace Connection {
   export enum Events {
-    AllAdapeterLoaded = "connection.events.all_adapter_loaded"
+    AllAdapeterLoaded = "connection.events.all_adapter_loaded",
   }
 
   export enum AdapterFileStatus {
@@ -165,7 +177,7 @@ export namespace Connection {
     exited,
   }
 
-  export type AdapterFileInformation = {
+  export type AdapterInformation = {
     fileStatus: keyof typeof AdapterFileStatus;
 
     /**
@@ -176,11 +188,16 @@ export namespace Connection {
      * @private internal variable.
      */
     isExist: boolean;
+    /**
+     * @private internal variable.
+     */
+    instance: Adapter | null;
   };
 }
+structuredClone;
 
 export interface ConnectionExports {
-  adapters: Array<Adapter>;
+  readonly adapters: Array<Adapter>;
 
   /**
    * LoadApaters - via directory

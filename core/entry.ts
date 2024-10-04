@@ -54,7 +54,7 @@ export namespace EntryPoint {
   export type StructConfig = {
     adapterPath: string;
     adapters: {
-      [props: string]: Connection.AdapterFileInformation;
+      [props: string]: Connection.AdapterInformation;
     };
   };
 }
@@ -69,5 +69,5 @@ export interface EntryPointExports {
 _.merge(global.Niko, new EntryPoint());
 
 export default global.Niko;
-
+console.log(global.Niko.config)
 import "$./connection";
